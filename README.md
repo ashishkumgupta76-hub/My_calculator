@@ -1050,4 +1050,330 @@
     </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Utility: Calc & Convert</title>
+    <style>
+        :root {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --bg-input: #2d2d2d;
+            --text-main: #ffffff;
+            --text-dim: #b0b0b0;
+            --accent: #bb86fc;
+            --accent-op: #03dac6;
+            --shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f5f7fa;
+            --bg-card: #ffffff;
+            --bg-input: #f0f0f0;
+            --text-main: #2c3e50;
+            --text-dim: #7f8c8d;
+            --accent: #3498db;
+            --accent-op: #e67e22;
+            --shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            transition: 0.3s;
+        }
+
+        .header-tools {
+            display: flex;
+            gap: 15px;
+            margin: 20px;
+        }
+
+        .btn-tool {
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: none;
+            cursor: pointer;
+            background: var(--bg-card);
+            color: var(--text-main);
+            box-shadow: var(--shadow);
+            font-weight: bold;
+        }
+
+        .btn-tool.active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .main-app {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* --- Calculator --- */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 70px);
+            grid-template-rows: minmax(120px, auto) repeat(5, 70px);
+            background-color: var(--bg-card);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        #calculator-view.hidden { display: none; }
+
+        .output {
+            grid-column: 1 / -1;
+            background: rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .output .prev { color: var(--text-dim); font-size: 1rem; }
+        .output .curr { color: var(--text-main); font-size: 2.2rem; font-weight: bold; }
+
+        .calculator-grid button {
+            border: 0.5px solid rgba(127,127,127,0.1);
+            background: var(--bg-card);
+            color: var(--text-main);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .calculator-grid button:hover { background: var(--bg-input); }
+        .op { color: var(--accent-op); font-weight: bold; }
+        .equals { background: var(--accent) !important; color: #000 !important; }
+
+        /* --- Converter --- */
+        #converter-view {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #converter-view.hidden { display: none; }
+
+        .conv-group { display: flex; flex-direction: column; gap: 8px; }
+
+        select, input.conv-input {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(127,127,127,0.3);
+            background: var(--bg-input);
+            color: var(--text-main);
+            font-size: 1rem;
+        }
+
+        /* --- History --- */
+        .history-pane {
+            width: 250px;
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            max-height: 540px;
+            overflow-y: auto;
+        }
+
+        .hist-item {
+            padding: 10px;
+            border-bottom: 1px solid rgba(127,127,127,0.1);
+            font-size: 0.9rem;
+            text-align: right;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-tools">
+        <button class="btn-tool active" onclick="showView('calculator')">Calculator</button>
+        <button class="btn-tool" onclick="showView('converter')">Converter</button>
+        <button class="btn-tool" onclick="toggleTheme()">🌓 Theme</button>
+    </div>
+
+    <div class="main-app">
+        <div id="calculator-view" class="calculator-grid">
+            <div class="output">
+                <div class="prev" id="prev-op"></div>
+                <div class="curr" id="curr-op">0</div>
+            </div>
+            <button onclick="clearAll()" style="grid-column: span 2;" class="op">AC</button>
+            <button onclick="del()">DEL</button>
+            <button onclick="setSci('sqrt')" class="op">√</button>
+            <button onclick="setOp('/')" class="op">÷</button>
+            <button onclick="addNum('7')">7</button><button onclick="addNum('8')">8</button><button onclick="addNum('9')">9</button>
+            <button onclick="setOp('^')" class="op">^</button>
+            <button onclick="setOp('*')" class="op">×</button>
+            <button onclick="addNum('4')">4</button><button onclick="addNum('5')">5</button><button onclick="addNum('6')">6</button>
+            <button onclick="addNum('(')">(</button><button onclick="setOp('+')" class="op">+</button>
+            <button onclick="addNum('1')">1</button><button onclick="addNum('2')">2</button><button onclick="addNum('3')">3</button>
+            <button onclick="addNum(')')">)</button><button onclick="setOp('-')" class="op">-</button>
+            <button onclick="addNum('.')">.</button><button onclick="addNum('0')">0</button>
+            <button onclick="solve()" style="grid-column: span 3;" class="equals">=</button>
+        </div>
+
+        <div id="converter-view" class="hidden">
+            <h2>Unit Converter</h2>
+            <div class="conv-group">
+                <label>Category</label>
+                <select id="conv-cat" onchange="updateUnits()">
+                    <option value="length">Length (m, ft, in)</option>
+                    <option value="weight">Weight (kg, lb)</option>
+                    <option value="temp">Temperature (C, F)</option>
+                </select>
+            </div>
+            <div class="conv-group">
+                <input type="number" id="unit-from-val" class="conv-input" value="1" oninput="convert()">
+                <select id="unit-from-type" onchange="convert()"></select>
+            </div>
+            <div style="text-align: center; font-weight: bold;">=</div>
+            <div class="conv-group">
+                <input type="number" id="unit-to-val" class="conv-input" readonly>
+                <select id="unit-to-type" onchange="convert()"></select>
+            </div>
+        </div>
+
+        <div class="history-pane">
+            <h4 style="margin-top: 0;">History</h4>
+            <div id="hist-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- NAVIGATION & THEME ---
+        function showView(view) {
+            document.getElementById('calculator-view').classList.toggle('hidden', view !== 'calculator');
+            document.getElementById('converter-view').classList.toggle('hidden', view !== 'converter');
+            document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function toggleTheme() {
+            const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+
+        // --- CALCULATOR LOGIC ---
+        let currentInput = '';
+        let previousInput = '';
+        let activeOp = undefined;
+
+        const currDisplay = document.getElementById('curr-op');
+        const prevDisplay = document.getElementById('prev-op');
+        const histList = document.getElementById('hist-list');
+
+        function addNum(n) { currentInput += n; updateUI(); }
+        function clearAll() { currentInput = ''; previousInput = ''; activeOp = undefined; updateUI(); }
+        function del() { currentInput = currentInput.slice(0, -1); updateUI(); }
+        
+        function setOp(op) {
+            if (currentInput === '') return;
+            if (previousInput !== '') solve();
+            activeOp = op;
+            previousInput = currentInput;
+            currentInput = '';
+            updateUI();
+        }
+
+        function solve() {
+            let result;
+            const p = parseFloat(previousInput);
+            const c = parseFloat(currentInput);
+            if (isNaN(p) || isNaN(c)) return;
+            switch(activeOp) {
+                case '+': result = p + c; break;
+                case '-': result = p - c; break;
+                case '*': result = p * c; break;
+                case '/': result = p / c; break;
+                case '^': result = Math.pow(p, c); break;
+            }
+            addHist(`${previousInput} ${activeOp} ${currentInput}`, result);
+            currentInput = result.toString();
+            activeOp = undefined;
+            previousInput = '';
+            updateUI();
+        }
+
+        function setSci(type) {
+            if (currentInput === '') return;
+            let result = Math.sqrt(parseFloat(currentInput));
+            addHist(`√(${currentInput})`, result);
+            currentInput = result.toString();
+            updateUI();
+        }
+
+        function updateUI() {
+            currDisplay.innerText = currentInput || '0';
+            prevDisplay.innerText = activeOp ? `${previousInput} ${activeOp}` : '';
+        }
+
+        function addHist(eq, res) {
+            const div = document.createElement('div');
+            div.className = 'hist-item';
+            div.innerHTML = `${eq} = <br><strong>${res}</strong>`;
+            div.onclick = () => { currentInput = res.toString(); updateUI(); };
+            histList.prepend(div);
+        }
+
+        // --- CONVERTER LOGIC ---
+        const units = {
+            length: { m: 1, ft: 3.28084, in: 39.3701 },
+            weight: { kg: 1, lb: 2.20462 },
+            temp: { c: 'c', f: 'f' }
+        };
+
+        function updateUnits() {
+            const cat = document.getElementById('conv-cat').value;
+            const from = document.getElementById('unit-from-type');
+            const to = document.getElementById('unit-to-type');
+            from.innerHTML = to.innerHTML = '';
+            Object.keys(units[cat]).forEach(u => {
+                from.add(new Option(u.toUpperCase(), u));
+                to.add(new Option(u.toUpperCase(), u));
+            });
+            convert();
+        }
+
+        function convert() {
+            const cat = document.getElementById('conv-cat').value;
+            const val = parseFloat(document.getElementById('unit-from-val').value);
+            const from = document.getElementById('unit-from-type').value;
+            const to = document.getElementById('unit-to-type').value;
+            let result;
+
+            if (cat === 'temp') {
+                if (from === to) result = val;
+                else if (from === 'c') result = (val * 9/5) + 32;
+                else result = (val - 32) * 5/9;
+            } else {
+                result = val * (units[cat][to] / units[cat][from]);
+            }
+            document.getElementById('unit-to-val').value = result.toFixed(4);
+        }
+
+        updateUnits(); // Init converter
+    </script>
+</body>
+</html>
 
