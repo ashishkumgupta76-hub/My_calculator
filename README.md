@@ -1376,4 +1376,100 @@
     </script>
 </body>
 </html>
+// --- 1. PERSISTENCE HELPERS ---
+const storage = {
+    saveHistory(list) {
+        localStorage.setItem('calc_history', JSON.stringify(list));
+    },
+    getHistory() {
+        return JSON.parse(localStorage.getItem('calc_history') || '[]');
+    },
+    saveTheme(theme) {
+        localStorage.setItem('calc_theme', theme);
+    },
+    getTheme() {
+        return localStorage.getItem('calc_theme') || 'dark';
+    }
+};
+
+// --- 2. THEME & INITIALIZATION ---
+function init() {
+    // Restore Theme
+    const savedTheme = storage.getTheme();
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    document.getElementById('checkbox').checked = (savedTheme === 'light');
+
+    // Restore History
+    const savedHistory = storage.getHistory();
+    savedHistory.forEach(item => renderHistoryItem(item.eq, item.res));
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const newTheme = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    storage.saveTheme(newTheme);
+}
+
+// --- 3. CALCULATOR LOGIC (WITH SAVING) ---
+let currentInput = '';
+let previousInput = '';
+let activeOp = undefined;
+
+const currDisplay = document.getElementById('curr-op');
+const prevDisplay = document.getElementById('prev-op');
+const histList = document.getElementById('hist-list');
+
+function addNum(n) { currentInput += n; updateUI(); }
+function clearAll() { 
+    currentInput = ''; 
+    previousInput = ''; 
+    activeOp = undefined; 
+    updateUI(); 
+}
+
+function solve() {
+    let result;
+    const p = parseFloat(previousInput);
+    const c = parseFloat(currentInput);
+    if (isNaN(p) || isNaN(c)) return;
+
+    switch(activeOp) {
+        case '+': result = p + c; break;
+        case '-': result = p - c; break;
+        case '*': result = p * c; break;
+        case '/': result = p / c; break;
+        case '^': result = Math.pow(p, c); break;
+    }
+
+    const eq = `${previousInput} ${activeOp} ${currentInput}`;
+    saveAndRenderHistory(eq, result);
+    
+    currentInput = result.toString();
+    activeOp = undefined;
+    previousInput = '';
+    updateUI();
+}
+
+function saveAndRenderHistory(eq, res) {
+    // Add to Local Storage
+    const history = storage.getHistory();
+    history.unshift({ eq, res });
+    storage.saveHistory(history.slice(0, 50)); // Keep last 50 items
+
+    // Add to UI
+    renderHistoryItem(eq, res);
+}
+
+function renderHistoryItem(eq, res) {
+    const div = document.createElement('div');
+    div.className = 'hist-item';
+    div.innerHTML = `${eq} = <br><strong>${res}</strong>`;
+    div.onclick = () => { currentInput = res.toString(); updateUI(); };
+    histList.prepend(div);
+}
+
+// Start the app
+init();
+updateUnits(); // Init converter units from previous version
 
